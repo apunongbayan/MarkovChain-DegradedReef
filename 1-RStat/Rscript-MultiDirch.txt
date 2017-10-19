@@ -118,7 +118,8 @@ traceplot(x)
 # there is need for longer chains (more iterations)
 
 # Select samples to save
-xkeep = window(x, start=50000, end=80000)
+#xkeep = window(x, start=50000, end=80000)   #edit depending on number of iterations
+xkeep = x
 
 
 # Convert MCMC samples to matrix 
