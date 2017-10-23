@@ -1,0 +1,153 @@
+# Fixed effects model for patch state transitions
+
+# Notes: included dataset is a subset of the one used in the manuscript
+# You will need to install JAGS from http://mcmc-jags.sourceforge.net
+# so that the R package rjags will work
+# For questions regarding the code, please email me: apunongbayan@gmail.com
+
+# set working directory - please edit - insert path to the codes folder
+# setwd("../1-RStat")
+setwd("/Users/andalus/git/MarkovChain-DegradedReef/1-RStat")
+
+# Install necessary packages
+#install.packages("xxxxxxxx.tgz", repos=NULL, type="source")
+
+# load packages
+library(xlsx)
+library(gdata)
+library(rjags)
+library(mcmcplots)
+
+# training data
+datafile <- "markov-sheets-combined-translated-monthly.xls"
+
+# read training data
+# first sheet
+alldata <- read.xlsx(datafile, 1)   
+head(is.na(alldata)) #check for missing values
+# append data from other sheets
+for(s in 2:sheetCount(datafile)) { 
+file <- read.xlsx(datafile, s)
+alldata <- rbind(alldata, file)
+}
+
+
+# data for bayesian analysis
+numStates <- 8
+numMonths <- 27   	#months 0 to 26
+state = alldata[ ,6:32] #patch state time series
+#plot = alldata$plot_id	#permanent quadrat ID
+#nplots = length(unique(alldata$plot_id))
+alpha <- matrix(rep(1,numStates^2), nrow = numStates, ncol = numStates)
+
+# inspect time series data
+head(state)
+summary(state)
+
+
+# convert to list format, compatible with JAGS
+# must reindex state to start from 1 not 0
+jagsdata <- list(n = length(alldata$uniqueCell), numMonths = numMonths, state = state + 1, numStates = numStates, alpha = alpha)
+# SAVE WORKSPACE AT THIS POINT
+
+#Specify model in BUGS language
+sink("monthlyprobs_fixedeffects.jags")
+cat("
+model {
+# PRIORS
+# Prior for initial state dist
+x_init[1:numStates] ~ ddirch(alpha[1:numStates,1])
+# Prior for transition probabilities given state of departure
+for (s in 1:numStates) {
+	p[1:numStates,s] ~ ddirch(alpha[1:numStates,s])
+}
+
+# LIKELIHOOD
+for (i in 1:n) {
+        state[i,1] ~ dcat(x_init[1:numStates])
+	for (t in 1:(numMonths-1)) {
+		state[i,(t+1)] ~ dcat(p[1:numStates,state[i,t]])
+	}
+}
+}
+", fill=TRUE)
+sink()	
+
+
+# Params to monitor
+params <- c("p","x_init")
+
+# MCMC settings
+ni <- 50000	#I used 500000; this might take long, so try 50000 first to see if it runs
+nt <- 10
+adapt <- 30000  #number of adaptation steps to tune the sampler; optional;
+nb <- 20000	#I used 200000
+nc <- 3
+set.seed(1)
+
+# Call JAGS from R
+library(rjags)
+out <- jags.model("monthlyprobs_fixedeffects.jags", data=jagsdata, n.chains = nc, n.adapt=adapt)  
+# there is an option to specify initial values; not implemented here
+# update and assign mcmc output list to x
+x <- coda.samples(out, params, n.iter = ni, thin = nt) 
+
+# view summary stats
+summary(x) 
+
+# Diagnostics
+# (a) Gelman-Rubin psr: shrink factors should not be far from 1
+gelman.diag(x)  
+# Note that error calculating this statistic will disappear with longer runs
+
+# (b) Geweke's diag: Standard Z-score, difference between 2 sample means 
+# (first .10 of samples vs last .50 of samples);
+# 95% central area, use 1.96; 
+geweke.diag(x, frac1=0.1, frac2=0.5)	
+
+# Quick visualization: trace plots
+traceplot(x)
+
+# Select samples to save
+#xkeep = window(x, start=50000, end=80000)   #edit depending on number of iterations
+xkeep = x
+
+
+# Convert MCMC samples to matrix 
+# Save matrix for use in Matlab
+xmat <- as.matrix(xkeep)  
+filetowrite <- "jags-output-t0-26-v1-fixed.csv"
+outputfolder <- "MCMCsamples"
+dir.create(outputfolder)
+write.csv(xmat, file.path(outputfolder,filetowrite), row.names=FALSE)
+
+# Output graphs for chains
+graphsfolder <- "MCMCoutput"
+dir.create(graphsfolder)
+mcmcplot(xkeep, parms=NULL, regex=NULL, random=NULL, dir=file.path(graphsfolder), heading="Bayesian analysis of fixed effects model using data subset")
+
+
+
+####### Additional: DIC calculation
+
+# option 1
+# Extended runs - Calculate DIC and pD
+dic.samples(out,1000,thin=nt, type="pD")
+dic.samples(out,1000,thin=nt, type="popt")
+
+# option 2 - store DIC values with the parameter estimate samples
+load.module("dic")
+params <- c("p","x_init","deviance")
+x2 <- coda.samples(out, params, n.iter = 3000, thin = nt, DIC=TRUE)  #update and save; outputs mcmc list
+#xnew.keep = window(x2, start=500000, end=800000) #edit depending on number of iterations
+xkeep2 = x2
+
+
+xmat2 <- as.matrix(xkeep2) 
+filetowrite <- "jags-output-t0-26-v1-fixed-dic.csv"
+filename <- file.path(outputfolder,filetowrite)
+write.csv(xmat2, filename, row.names=FALSE)
+
+
+###############################################################################
+

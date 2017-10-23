@@ -1,4 +1,4 @@
-# Multinomial-Dirichlet model for patch state transitions
+# Categorical-Dirichlet model for patch state transitions
 
 # Notes: included dataset is a subset of the one used in the manuscript
 # You will need to install JAGS from http://mcmc-jags.sourceforge.net
@@ -47,7 +47,7 @@ jagsdata <- list(n = length(alldata$uniqueCell), numMonths = numMonths, state = 
 # SAVE WORKSPACE AT THIS POINT
 
 # Specify model in BUGS language
-sink("monthlyprobs_95ci_multidirch.jags")
+sink("monthlyprobs_hierarchical.jags")
 cat("
 model {
 # PRIORS
@@ -95,7 +95,7 @@ nc <- 3
 set.seed(1)
 
 # Call JAGS from R
-out <- jags.model("monthlyprobs_95ci_multidirch.jags", data=jagsdata, n.chains = nc, n.adapt=adapt)  
+out <- jags.model("monthlyprobs_hierarchical.jags", data=jagsdata, n.chains = nc, n.adapt=adapt)  
 # there is an option to specify initial values; not implemented here
 # update and assign mcmc output list to x
 x <- coda.samples(out, params, n.iter = ni, thin = nt)  
@@ -133,7 +133,7 @@ write.csv(xmat, file.path(outputfolder,filetowrite), row.names=FALSE)
 # Output graphs for chains
 graphsfolder <- "MCMCoutput"
 dir.create(graphsfolder)
-mcmcplot(xkeep, parms=NULL, regex=NULL, random=NULL, dir=file.path(graphsfolder), heading="Bayesian analysis using data subset")
+mcmcplot(xkeep, parms=NULL, regex=NULL, random=NULL, dir=file.path(graphsfolder), heading="Bayesian analysis of hierarchical model using data subset")
 
 
 
@@ -154,7 +154,7 @@ x2 <- coda.samples(out, params, n.iter = 3000, thin = nt, DIC=TRUE)  #update and
 xkeep2 = x2
 
 xmat2 <- as.matrix(xkeep2) 
-filetowrite <- "jags-output-t0-26-v2dic.csv"
+filetowrite <- "jags-output-t0-26-v2-multidirch-dic.csv"
 filename <- file.path(outputfolder,filetowrite)
 write.csv(xmat2, filename, row.names=FALSE)
 
