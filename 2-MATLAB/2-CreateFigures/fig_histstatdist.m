@@ -1,15 +1,9 @@
 function [ output_args ] = fig_histstatdist( samples )
-%%FIG_HISTSTATDIST2 Creates histogram plots for parameters in mx. samples
-%   same as fig_histstatdist2, and adds observed points at the bottom
+%FIG_HISTSTATDIST Creates histogram plots for parameters in mx. samples
+%
 % Input
 %  samples - a matrix; col - parameter; row - samples
-% Loaded data:
-%  valid - a matrix; col - parameter; row - samples
-%  train - a matrix; col - parameter; row - samples
 
-load data-plotspec-avecover.mat;
-valid = avecover_plotspec_valid(:,2:end);
-train = avecover_plotspec(:,2:end);
 
 xmaxs = [0.7, 0.3, 0.4, 0.7, 0.15, 0.1, 0.15, 0.1]*100;
 flabs = {'(a) C','(b) MA','(c) ACA','(d) CAL','(e) OT',...
@@ -47,13 +41,6 @@ for i = 1:8
     plot([ub, ub],[0,max(freqs)],'k--', 'LineWidth',1);
     plot([mo, mo],[0,max(freqs)],'Color',[0.1 0.1 0.1],'LineStyle','-',...
         'LineWidth',2);
-
-    plot(train(:,i)*100,repmat(0,1,length(train(:,i))),'ko',...
-        'MarkerFaceColor','none',...
-        'MarkerSize',6); %ko    
-    plot(valid(:,i)*100,repmat(0,1,length(valid(:,i))),'kv',...
-        'MarkerFaceColor','none',...
-        'MarkerSize',6); %kv 
     
     %label
     if mod(i,4) == 1
@@ -69,8 +56,7 @@ for i = 1:8
     text(.65,.97,flabs{i},'Units', 'Normalized',...
         'VerticalAlignment', 'Top','FontSize',11);
     
-    tmp = [train(:,i); valid(:,i)];
-    diff = max(tmp) - min(tmp);
+
     
     % force scientific notation on axes, for uniformity
     % code from: https://www.mathworks.com/matlabcentral/answers/158707-force-scientific-notation-in-axes

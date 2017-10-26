@@ -1,4 +1,4 @@
-function [ output_args ] = fig_paramposterior_lines( samples, polycol,...
+function [ output_args ] = fig_paramposterior_lines( samples, linecol,...
     xlimon, pind, lstyle)
 %FIG_PARAMPOSTERIOR_LINES Create histograms for densities of probabilities; 
 %already includes label for each subplot
@@ -6,7 +6,7 @@ function [ output_args ] = fig_paramposterior_lines( samples, polycol,...
 
 % Input
 % samples - matrix, row - sample , col - param
-% polycol - color of line
+% linecol - color of line
 % xlimon - indicator for setting x limits to maximum of observed
 % pind - indicator for samples that are constrained to [0,1]
 % lstyle - line style
@@ -58,8 +58,9 @@ for yi=1:yy
     ntot = sum(fi);
     px = (fi / ntot) / dx;   %probability density 
 
-    plot(xcenters, px, 'Color',polycol,'LineStyle',lstyle,'LineWidth',1.5,...
-        'LineSmoothing','on')
+    plot(xcenters, px, 'Color',linecol,'LineStyle',lstyle,'LineWidth',1.5)
+%     plot(xcenters, px, 'Color',polycol,'LineStyle',lstyle,'LineWidth',1.5,...
+%         'LineSmoothing','on')
     %Used linewidth of 2 for the paper figures; 1.5 for supplementary
     %figures
         
@@ -108,6 +109,6 @@ end
 
 % h = text(1,7,'Posterior density');
 % set(h, 'Rotation', 90);
-
+% h2 = text(1,7,'Transition probability')
 % 13cm width? 
 end

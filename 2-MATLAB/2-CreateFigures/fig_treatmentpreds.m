@@ -48,7 +48,7 @@ for si = 1:ns
     plot(tvec,mean(statecover)*100,'k-'); 
     
     % Add observed trajectory in treatment 2 plots
-    addtrajectories(2,si);
+%     addtrajectories(2,si);
     
     % Figure related stuff
     text(.65,.95,[flabs{si}],'Units', 'Normalized',...
