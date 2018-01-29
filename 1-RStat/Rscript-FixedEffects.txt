@@ -6,7 +6,7 @@
 # For questions regarding the code, please email me: apunongbayan@gmail.com
 
 # set working directory - please edit - insert path to the codes folder
-# setwd("../1-RStat")
+# setwd("../MarkovChain-DegradedReef/1-RStat")
 setwd("/Users/andalus/git/MarkovChain-DegradedReef/1-RStat")
 
 # Install necessary packages
@@ -97,7 +97,8 @@ summary(x)
 
 # Diagnostics
 # (a) Gelman-Rubin psr: shrink factors should not be far from 1
-gelman.diag(x)  
+if(ni>=500000) {gelman.diag(x)}  
+#gelman.diag(x)  
 # Note that error calculating this statistic will disappear with longer runs
 
 # (b) Geweke's diag: Standard Z-score, difference between 2 sample means 
@@ -124,7 +125,7 @@ write.csv(xmat, file.path(outputfolder,filetowrite), row.names=FALSE)
 # Output graphs for chains
 graphsfolder <- "MCMCoutput"
 dir.create(graphsfolder)
-mcmcplot(xkeep, parms=NULL, regex=NULL, random=NULL, dir=file.path(graphsfolder), heading="Bayesian analysis of fixed effects model using data subset")
+mcmcplot(xkeep, parms=NULL, regex=NULL, random=NULL, dir=file.path(getwd(),graphsfolder), heading="Bayesian analysis of fixed effects model using data subset")
 
 
 
