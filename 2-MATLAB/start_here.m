@@ -12,11 +12,11 @@ filename = 'jags-output-t0-26-v1-fixed.csv';
 header_row = 1;
 posterior_draws = csvread(filename,header_row);
 
-PmatSamplesRows = posterior_draws(:,1:64);
+PmatSamplesRows = posterior_draws(:,1:64);      %transition probabilities
+InitStateDistRows = posterior_draws(:,65:end);  %initial state distribution
 
-% file = 'multidirch_P_samples.mat';
 file = 'FixedEffect_P_samples.mat';
-save(file,'PmatSamplesRows');
+save(file,'PmatSamplesRows','InitStateDistRows');
 
 %% Categorical-Dirichlet model for patch state transitions
 % alpha samples
@@ -45,13 +45,13 @@ P_mu = Ap_mu ./ repmat(sum(Ap_mu),8,1);     % transition probability matrix
 x_mu = Ax_mu / sum(Ax_mu);                  % initial state               
 
 % Save variables for later use
-file2 = ['MultiDirch_params.mat'];
+file2 = ['CatDirch_params.mat'];
 save(file2,'Ap_samples','Ax_samples','Ap_mu','Ax_mu','P_mu','x_mu');
 
 %% Inspect mean pijs (Fig. 2 subplot)
 
 close all; clear all;
-load MultiDirch_params.mat 
+load CatDirch_params.mat 
 
 % Inspect relative magnitudes of the mean transition probabilities
 fig_pij_means(P_mu);
@@ -61,7 +61,7 @@ fig_pij_means(P_mu);
 % Option 1 - given uncertainty about Dirichlet parameters
 
 close all; clear all; 
-load MultiDirch_params.mat 
+load CatDirch_params.mat 
 
 [nr,nc] = size(Ap_samples);
 ns = sqrt(nc);
@@ -69,38 +69,44 @@ ns = sqrt(nc);
 nsets = 30000; % Number of Dirichlet parameter sets to sample
 nq = 3;     % number of replicate quadrats given Dirichlet parameter set
 PmatSamplesRows = [];
+InitStateDistRows = [];
 
 for n = 1:nsets
     ri = randi(nr,1);
     A = vec2mat(Ap_samples(ri,:),ns)';
+    a0 = Ax_samples(ri,:);
     for q = 1:nq
         % sample transition prob. matrix
         P_i = samplePmatfromAlpha(A);
         % convert to row and save to list
         PmatSamplesRows(end+1,:) = P_i(:)';
+        
+        %sample initial state distribution
+        InitStateDistRows(end+1,:) = sampleInitDistfromAlpha(a0);
     end
 end
 
-% file = 'multidirch_P_samples.mat';
-file = 'unkAlpha_P_samples.mat';
-save(file,'PmatSamplesRows');
+file = 'UnkAlpha_P_samples.mat';
+save(file,'PmatSamplesRows','InitStateDistRows');
 
 %% Sample transition probabilities 
 % Option 2 - using the posterior means of Dirichlet parameters
 
 close all; clear all;
-load MultiDirch_params.mat 
+load CatDirch_params.mat 
 
 nq = 90000;    % number of replicate quadrats given Dirichlet parameter set
 PmatSamplesRows = [];
+InitStateDistRows = [];
 
 for n = 1:nq
     P_i = samplePmatfromAlpha(Ap_mu);
     PmatSamplesRows(end+1,:) = P_i(:)';   
+    InitStateDistRows(end+1,:) = sampleInitDistfromAlpha(Ax_mu);
 end
 
-file = 'meanAlpha_P_samples.mat';
-save(file,'PmatSamplesRows');
+file = 'MeanAlpha_P_samples.mat';
+save(file,'PmatSamplesRows','InitStateDistRows');
 
 %% Inspect the posterior densities of pijs 
 
@@ -110,10 +116,10 @@ close all; clear all;
 % load FixedEffect_P_samples.mat
 
 % Option 1 - given parameter uncertainty 
-load unkAlpha_P_samples.mat
+load UnkAlpha_P_samples.mat
 
 % % Option 2 - when drawn from posterior means of Dirichlet parameters
-% load meanAlpha_P_samples.mat
+% load MeanAlpha_P_samples.mat
 
 linecolor = [0 0 0];
 pij_indicator = 1;
@@ -125,7 +131,7 @@ fig_paramposterior_lines(PmatSamplesRows,linecolor, xaxis_maxval, ...
 %% Inspect the posterior densities of Dirichlet parameters
 
 close all; clear all;
-load MultiDirch_params.mat 
+load CatDirch_params.mat 
 
 linecolor = [0 0 0];
 pij_indicator = 0;
@@ -143,12 +149,12 @@ close all; clear all;
 % file = 'FixedEffect_w1_samples.mat';  % output file
 
 % Option 1: Given parameter uncertainty
-load unkAlpha_P_samples.mat 
-file = 'unkAlpha_w1_samples.mat';   %output file
+load UnkAlpha_P_samples.mat 
+file = 'UnkAlpha_w1_samples.mat';   %output file
 
 % % Option 2: Given posterior means for Dirichlet parameters
-% load meanAlpha_P_samples.mat
-% file = 'meanAlpha_w1_samples.mat'; %output file
+% load MeanAlpha_P_samples.mat
+% file = 'MeanAlpha_w1_samples.mat'; %output file
 
 [nx,ny] = size(PmatSamplesRows);
 ns = sqrt(ny);
@@ -162,17 +168,46 @@ end
 fig_histstatdist(w1_samples');
 save(file,'w1_samples');
 
+%% Projected trajectories in natural / unmanipulated plots
+
+clear all; close all;
+
+% % Option 0:  Fixed effects model
+% load FixedEffect_P_samples.mat 
+% file = 'FixedEffect_projections_naturalplots.mat';
+
+% % Option 1: Given uncertainty about Dirichlet parameters
+load UnkAlpha_P_samples.mat 
+file = 'UnkAlpha_projections_naturalplots.mat';
+
+% % Option 2: Given posterior means for Dirichlet parameters
+% load MeanAlpha_P_samples.mat
+% file = 'MeanAlpha_projections_naturalplots.mat';
+
+time_end = 26;                  % months
+
+[trajs, tvec] = stateTrajectoriesRandInit(PmatSamplesRows,...
+    InitStateDistRows,time_end);
+
+save(file,'trajs','tvec');
+
+fig_treatmentpreds(trajs, tvec)
+
 %% Projected trajectories in empty plots
 
 clear all; close all;
 
+% % Option 0:  Fixed effects model
+% load FixedEffect_P_samples.mat 
+% file = 'FixedEffect_projections_clearedplots.mat';
+
 % % Option 1: Given uncertainty about Dirichlet parameters
-load unkAlpha_P_samples.mat 
-file = 'unkAlpha_projections_clearedplots.mat';
+load UnkAlpha_P_samples.mat 
+file = 'UnkAlpha_projections_clearedplots.mat';
 
 % % Option 2: Given posterior means for Dirichlet parameters
-% load meanAlpha_P_samples.mat
-% file = 'meanAlpha_projections_clearedplots.mat';
+% load MeanAlpha_P_samples.mat
+% file = 'MeanAlpha_projections_clearedplots.mat';
 
 init_x = [1 0 0 0 0 0 0 0]';    % initial state distribution; 100% C
 time_end = 44;                  % months
@@ -181,15 +216,18 @@ time_end = 44;                  % months
 
 save(file,'trajs','tvec');
 
-%% Predicted cover trajectories starting from 100% crustose algae
+%% Create figure of predicted trajectories starting from 100% crustose algae
 
 clear all; close all;
 
-% Option 1 - unknown Dirichlet parameters
-load unkAlpha_projections_clearedplots.mat
+% % Option 0:  Fixed effects model
+% load FixedEffect_projections_clearedplots.mat
+
+% % Option 1 - unknown Dirichlet parameters
+load UnkAlpha_projections_clearedplots.mat
 
 % % Option 2 - posterior mean Dirichlet parameters
-% load meanAlpha_projections_clearedplots.mat
+% load MeanAlpha_projections_clearedplots.mat
 
 fig_treatmentpreds(trajs, tvec)
 
@@ -202,12 +240,12 @@ close all; clear all;
 % file = 'FixedEffect_indices.mat';
 
 % Option 1: Given uncertainty about Dirichlet parameters
-load unkAlpha_P_samples.mat 
-file = 'unkAlpha_indices.mat';    % output file
+load UnkAlpha_P_samples.mat 
+file = 'UnkAlpha_indices.mat';    % output file
 
-% Option 2: Given posterior means for Dirichlet parameters
-% load meanAlpha_P_samples.mat
-% file = 'meanAlpha_indices.mat';     % output file     
+% % Option 2: Given posterior means for Dirichlet parameters
+% load MeanAlpha_P_samples.mat
+% file = 'MeanAlpha_indices.mat';     % output file     
 
 interval_length = 1;    % resolution of P (in months)
 empty_state_index = 1;  % CCA or empty state
@@ -230,29 +268,29 @@ save(file,'propertyNames','all_indices_samples','means','medians',...
 
 close all; clear all; 
 
-% Option 1: Given uncertainty about Dirichlet parameters
-load unkAlpha_indices.mat
+% % Option 1: Given uncertainty about Dirichlet parameters
+load UnkAlpha_indices.mat
 
 % % Option 2: Given posterior means for Dirichlet parameters
-% load meanAlpha_indices.mat
+% load MeanAlpha_indices.mat
 
 fig_communityproperties(all_indices_samples)
 
 
-%% Plot a subset of successional indices - Fig. 6 
+%% Plot a subset of successional indices
 % Latest version: 2 sets (with or without parameter uncertainty)
 
-close all; clear all; 
-
-% % Option 1: Given uncertainty about Dirichlet parameters
-load unkAlpha_indices.mat
-props1 = all_indices_samples;
-
-% Option 2: Given posterior means for Dirichlet parameters
-load meanAlpha_indices.mat
-props2 = all_indices_samples;
-
-fig_communityproperties_2sets(props1,props2)
+% % close all; clear all; 
+% % 
+% % % % Option 1: Given uncertainty about Dirichlet parameters
+% % load UnkAlpha_indices.mat
+% % props1 = all_indices_samples;
+% % 
+% % % Option 2: Given posterior means for Dirichlet parameters
+% % load MeanAlpha_indices.mat
+% % props2 = all_indices_samples;
+% % 
+% % fig_communityproperties_2sets(props1,props2)
 
 
 %% Sensitivity analysis
@@ -260,12 +298,12 @@ fig_communityproperties_2sets(props1,props2)
 close all; clear all;
 
 % Option 1: Given uncertainty about Dirichlet parameters
-load unkAlpha_P_samples.mat 
-file = 'unkAlpha_sensmatsamples.mat';
+load UnkAlpha_P_samples.mat 
+file = 'UnkAlpha_sensmatsamples.mat';
 
 % % Option 2: Given posterior means for Dirichlet parameters
-% load meanAlpha_P_samples.mat
-% file = 'meanAlpha_sensmatsamples.mat';
+% load MeanAlpha_P_samples.mat
+% file = 'MeanAlpha_sensmatsamples.mat';
 
 % Calculate sensitivity uncertainty using smaller number of samples
 PmatSamplesSub = PmatSamplesRows(1:10000,:);
@@ -282,10 +320,10 @@ save(file,'Smats');
 close all; clear all;
 
 % Option 1 - accounts for parameter uncertainty
-load unkAlpha_sensmatsamples.mat
+load UnkAlpha_sensmatsamples.mat
 
 % % Option 2 - using posterior means of parameters
-% load meanAlpha_sensmatsamples.mat
+% load MeanAlpha_sensmatsamples.mat
 
 fig_sensitivities(Smats)
 
