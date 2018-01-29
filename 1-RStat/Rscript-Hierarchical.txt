@@ -133,7 +133,7 @@ write.csv(xmat, file.path(outputfolder,filetowrite), row.names=FALSE)
 # Output graphs for chains
 graphsfolder <- "MCMCoutput"
 dir.create(graphsfolder)
-mcmcplot(xkeep, parms=NULL, regex=NULL, random=NULL, dir=file.path(graphsfolder), heading="Bayesian analysis of hierarchical model using data subset")
+mcmcplot(xkeep, parms=NULL, regex=NULL, random=NULL, dir=file.path(getwd(),graphsfolder), heading="Bayesian analysis of hierarchical model using data subset")
 
 
 
