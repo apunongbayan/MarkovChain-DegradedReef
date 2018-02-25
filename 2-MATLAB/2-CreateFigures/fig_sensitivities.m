@@ -52,8 +52,10 @@ idum = 1:length(svec);
 % find sensitivities that are consistent in sign
 % (i.e. 95% HPD do not overlap both + and - values)
 consistency_check = lvec95(idum).*uvec95(idum);
-consistent = idum(find(consistency_check>0));
-inconsistent = idum(find(consistency_check<=0));
+%consistent = idum(find(consistency_check>0));
+thresh = 0.02;
+consistent = idum(find(consistency_check>0 & abs(svec) > thresh))
+inconsistent = idum(find(consistency_check<=0 | abs(svec) <= thresh));
 
 
 % Plot consistent sensitivities
@@ -69,6 +71,12 @@ for i = 1:xi
 end
 plot(1:xi,svec(topid),'ko','MarkerSize',6,'MarkerFaceColor',[1 1 1]);
 
+% % check
+% labelvec(topid)
+% svec(topid)
+% lvec95(topid)
+% uvec95(topid)
+% min(abs(svec(topid)))
 
 % labels = cellstr(num2str(topid));  %' # labels correspond to their order
 oddxi = 1:2:length(topid);
